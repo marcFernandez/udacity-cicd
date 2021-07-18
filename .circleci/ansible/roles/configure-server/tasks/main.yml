@@ -12,7 +12,7 @@
 - name: "install node"
   become: yes
   apt:
-    name: ["nodejs"]
+    name: ["nodejs", "npm"]
 
 - name: "install pm2"
   become: yes
