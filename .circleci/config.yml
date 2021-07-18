@@ -190,12 +190,12 @@ jobs:
               --query "Reservations[*].Instances[*].PublicIpAddress" \
               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:8}" \
               --output text >> .circleci/ansible/inventory.txt
-      - run:
-          command: |
-            ls -lah
-            pwd
+      #- run:
+          #command: |
+            #ls -lah
+            #pwd
       - persist_to_workspace:
-          root: ~/udapeople/.circleci/ansible/
+          root: ~/project/.circleci/ansible/
           paths:
             - inventory.txt
       # Here's where you will add some code to rollback on failure      
@@ -209,7 +209,7 @@ jobs:
           fingerprints:
             - "d8:73:ec:30:0e:be:a0:fb:c6:88:79:5c:65:c8:e9:15"
       - attach_workspace:
-          at: ~/udapeople/.circleci/ansible/
+          at: ~/project/.circleci/ansible/
       - read-from-memstash:
           key: "backendDNSname"
           envvarName: "backendDNSname"
