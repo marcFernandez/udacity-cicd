@@ -18,6 +18,21 @@ commands:
           curl -H "Content-Type: text/plain" -H "token: <<parameters.token>>" \
           --request PUT --data "<<parameters.value>>" "https://api.memstash.io/values/<<parameters.key>>"
 
+  read-from-memstash:
+    description: Read some string value to memstash
+    parameters:
+      key:
+        type: string
+      token:
+        type: string
+        default: "${memstashToken}"
+      envvarName:
+        description: The name of the envvar that will be saved in BASH_ENV so it can be used in further steps
+        type: string
+        default: "memstashValue"
+    steps:
+      - run: |
+          echo 'export <<parameters.envvarName>>=$(curl -H "token: <<parameters.token>>" --request GET "https://api.memstash.io/values/<<parameters.key>>")' >> $BASH_ENV
   #destroy-environment:
     #description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     #parameters:
@@ -176,29 +191,33 @@ jobs:
               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:8}" \
               --output text >> .circleci/ansible/inventory.txt
       - persist_to_workspace:
-          root: ~/
+          root: ~/project/.circleci/ansible/
           paths:
             - project/.circleci/ansible/inventory.txt
       # Here's where you will add some code to rollback on failure      
 
-  #configure-infrastructure:
-    #docker:
-      ## Docker image here that supports Ansible
-    #steps:
-      ## Checkout code from git
-      ## Add ssh keys with fingerprint
-      ## attach workspace
-      #- run:
-          #name: Install dependencies
-          #command: |
-            ## Your code here
-            #exit 1
-      #- run:
-          #name: Configure server
-          #command: |
-            ## Your code here
-            #exit 1
-      ## Here's where you will add some code to rollback on failure      
+  configure-infrastructure:
+    docker:
+      - image: python:3.8-alpine
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "d8:73:ec:30:0e:be:a0:fb:c6:88:79:5c:65:c8:e9:15"
+      - attach_workspace:
+          at: ~/project/.circleci/ansible/
+      - read-from-memstash:
+          key: "backendDNSname"
+          envvarName: "backendDNSname"
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update ansible
+      - run:
+          name: Configure server
+          command: |
+            ansible-playbook .circleci/ansible/configure-server.yml -i .circleci/ansible/inventory.txt
+      # Here's where you will add some code to rollback on failure      
 
   #run-migrations:
     #docker:
