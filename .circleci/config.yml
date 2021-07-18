@@ -195,9 +195,9 @@ jobs:
             ls -lah
             pwd
       - persist_to_workspace:
-          root: ~/project/.circleci/ansible/
+          root: ~/udapeople/.circleci/ansible/
           paths:
-            - project/.circleci/ansible/inventory.txt
+            - inventory.txt
       # Here's where you will add some code to rollback on failure      
 
   configure-infrastructure:
@@ -209,7 +209,7 @@ jobs:
           fingerprints:
             - "d8:73:ec:30:0e:be:a0:fb:c6:88:79:5c:65:c8:e9:15"
       - attach_workspace:
-          at: ~/project/.circleci/ansible/
+          at: ~/udapeople/.circleci/ansible/
       - read-from-memstash:
           key: "backendDNSname"
           envvarName: "backendDNSname"
