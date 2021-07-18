@@ -1,6 +1,20 @@
 version: 2.1
 
-#commands:
+commands:
+  save-to-memstash:
+    description: Save some string value to memstash
+    parameters:
+      key:
+        type: string
+      value:
+        type: string
+      token:
+        type: string
+    steps:
+      - run: |
+          curl -H "Content-Type: text/plain" -H "token: <<parameters.token>>" \
+          --request PUT --data "<<parameters.value>>" "https://api.memstash.io/values/<<parameters.key>>"
+
   #destroy-environment:
     #description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     #parameters:
@@ -119,39 +133,50 @@ jobs:
             cd backend
             npm audit fix --audit-level=critical --force
 
-  #deploy-infrastructure:
-    #docker:
-      ## Docker image here that supports AWS CLI
-    #steps:
-      ## Checkout code from git
-      #- run:
-          #name: Ensure back-end infrastructure exists
-          #command: |
-            #aws cloudformation deploy \
-              #--template-file .circleci/files/backend.yml \
-              ##--tags project=your-tag \
-              ## --stack-name "your back-end stack name with workflow id" \
-              ## --parameter-overrides ID="your workflow id"  
-              #exit 1
-      #- run:
-          #name: Ensure front-end infrastructure exist
-          #command: |
-            #aws cloudformation deploy \
-              #--template-file .circleci/files/frontend.yml \
-              ##--tags project=your-tag \
-              ## --stack-name "your front-end stack name with workflow id" \
-              ## --parameter-overrides ID="your workflow id"  
-              #exit 1
-      #- run:
-          #name: Add back-end ip to ansible inventory
-          #command: |
-            ## Your code here
-            #exit 1
-      #- persist_to_workspace:
-          #root: ~/
-          #paths:
-            #- project/.circleci/ansible/inventory.txt
-      ## Here's where you will add some code to rollback on failure      
+  deploy-infrastructure:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Ensure back-end infrastructure exists
+          command: |
+            # deploy backend stack through cloudformation template
+            aws cloudformation deploy \
+              --template-file .circleci/files/backend.yml \
+              --tags project=udapeople \
+              --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:8}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:8}"
+            # get the newly created server public DNS name
+            backendDNSname=$(aws ec2 describe-instances \
+              --query "Reservations[*].Instances[*].PublicDnsName" \
+              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:8}" \
+              --output text)
+      - save-to-memstash:
+          token: "${memstashToken}"
+          key: "backendDNSname"
+          value: "$backendDNSname"
+
+      - run:
+          name: Ensure front-end infrastructure exist
+          command: |
+            aws cloudformation deploy \
+              --template-file .circleci/files/frontend.yml \
+              --tags project=udapeople \
+              --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:8}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:8}"
+      - run:
+          name: Add back-end ip to ansible inventory
+          command: |
+            aws ec2 describe-instances \
+              --query "Reservations[*].Instances[*].PublicIpAddress" \
+              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:8}" \
+              --output text >> .circleci/ansible/inventory.txt
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/.circleci/ansible/inventory.txt
+      # Here's where you will add some code to rollback on failure      
 
   #configure-infrastructure:
     #docker:
@@ -298,11 +323,11 @@ workflows:
           requires: [build-backend]
       - scan-frontend:
           requires: [build-frontend]
-      #- deploy-infrastructure:
-          #requires: [test-frontend, test-backend, scan-frontend, scan-backend]
-          #filters:
-            #branches:
-              #only: [test-feature-branch]
+      - deploy-infrastructure:
+          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          filters:
+            branches:
+              only: [main] # [test-feature-branch]
       #- configure-infrastructure:
           #requires: [deploy-infrastructure]
       #- run-migrations:
