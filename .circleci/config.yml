@@ -33,17 +33,17 @@ commands:
     steps:
       - run: |
           echo 'export <<parameters.envvarName>>=$(curl -H "token: <<parameters.token>>" --request GET "https://api.memstash.io/values/<<parameters.key>>")' >> $BASH_ENV
-  #destroy-environment:
-    #description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
-    #parameters:
-      ## Add parameter here   
-    #steps:
-      #- run:
-          #name: Destroy environments
-          #when: on_fail
-          #command: |
-            ## Your code here
-            #exit 1
+
+  destroy-environment:
+    description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
+    steps:
+      - run:
+          name: Destroy environments
+          when: on_fail
+          command: |
+            aws s3 rm "s3://udapeople-${CIRCLE_WORKFLOW_ID:0:8}" --recursive
+            aws cloudformation delete-stack --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:8}"
+            aws cloudformation delete-stack --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:8}"
 
   #revert-migrations:
     #description: Revert the last migration if successfully run in the current workflow.
@@ -190,15 +190,11 @@ jobs:
               --query "Reservations[*].Instances[*].PublicIpAddress" \
               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:8}" \
               --output text >> .circleci/ansible/inventory.txt
-      #- run:
-          #command: |
-            #ls -lah
-            #pwd
       - persist_to_workspace:
           root: ~/project/.circleci/ansible/
           paths:
             - inventory.txt
-      # Here's where you will add some code to rollback on failure      
+      - destroy_environment
 
   configure-infrastructure:
     docker:
@@ -221,6 +217,7 @@ jobs:
           name: Configure server
           command: |
             ansible-playbook .circleci/ansible/configure-server.yml -i .circleci/ansible/inventory.txt
+      - destroy_environment
       # Here's where you will add some code to rollback on failure      
 
   #run-migrations:
@@ -354,8 +351,8 @@ workflows:
           filters:
             branches:
               only: [main] # [test-feature-branch]
-      #- configure-infrastructure:
-          #requires: [deploy-infrastructure]
+      - configure-infrastructure:
+          requires: [deploy-infrastructure]
       #- run-migrations:
           #requires: [configure-infrastructure]
       #- deploy-frontend:
