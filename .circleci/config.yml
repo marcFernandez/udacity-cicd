@@ -10,7 +10,10 @@ commands:
         type: string
       token:
         type: string
+        default: "${memstashToken}"
     steps:
+      - run: |
+          echo "token: <<parameters.token>>\nkey: <<parameters.key>>\nvalue: <<parameters.value>>"
       - run: |
           curl -H "Content-Type: text/plain" -H "token: <<parameters.token>>" \
           --request PUT --data "<<parameters.value>>" "https://api.memstash.io/values/<<parameters.key>>"
@@ -138,6 +141,7 @@ jobs:
       - image: amazon/aws-cli
     steps:
       - checkout
+      - run: yum -y install tar gzip
       - run:
           name: Ensure back-end infrastructure exists
           command: |
@@ -148,12 +152,11 @@ jobs:
               --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:8}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:8}"
             # get the newly created server public DNS name
-            backendDNSname=$(aws ec2 describe-instances \
+            export backendDNSname=$(aws ec2 describe-instances \
               --query "Reservations[*].Instances[*].PublicDnsName" \
               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:8}" \
-              --output text)
+              --output text) >> 
       - save-to-memstash:
-          token: "${memstashToken}"
           key: "backendDNSname"
           value: "$backendDNSname"
 
