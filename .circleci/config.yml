@@ -152,10 +152,10 @@ jobs:
               --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:8}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:8}"
             # get the newly created server public DNS name
-            export backendDNSname=$(aws ec2 describe-instances \
+            echo 'export backendDNSname=$(aws ec2 describe-instances \
               --query "Reservations[*].Instances[*].PublicDnsName" \
               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:8}" \
-              --output text) 
+              --output text)' >> $BASH_ENV 
       - save-to-memstash:
           key: "backendDNSname"
           value: "$backendDNSname"
