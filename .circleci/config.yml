@@ -155,7 +155,7 @@ jobs:
             export backendDNSname=$(aws ec2 describe-instances \
               --query "Reservations[*].Instances[*].PublicDnsName" \
               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:8}" \
-              --output text) >> 
+              --output text) 
       - save-to-memstash:
           key: "backendDNSname"
           value: "$backendDNSname"
