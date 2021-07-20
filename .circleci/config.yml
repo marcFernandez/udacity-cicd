@@ -226,11 +226,13 @@ jobs:
       - checkout
       - run:
           name: Run migrations
+          working_directory: backend
           command: |
             npm i
             npm run migrations > migrations_results.log
       - run:
           name: Check migratons results
+          working_directory: backend
           command: |
             if grep "has been executed successfully" migrations_results.log
             then
