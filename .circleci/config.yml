@@ -261,8 +261,8 @@ jobs:
             curl -sL https://rpm.nodesource.com/setup_lts.x | bash -
             yum -y install nodejs
       - read-from-memstash:
-          key: "BACKEND_IP"
-          envvarName: "backendDNSname"
+          envvarName: "BACKEND_IP"
+          key: "backendDNSname"
       - run:
           name: Get backend url
           command: |
