@@ -218,45 +218,60 @@ jobs:
           command: |
             ansible-playbook .circleci/ansible/configure-server.yml -i .circleci/ansible/inventory.txt
       - destroy-environment
+
+  run-migrations:
+    docker:
+      - image: node:14-alpine
+    steps:
+      - checkout
+      - run:
+          name: Run migrations
+          command: |
+            npm i
+            npm run migrations > migrations_results.log
+      - run:
+          name: Check migratons results
+          command: |
+            if grep "has been executed successfully" migrations_results.log
+            then
+              echo "export migrationsResults=1" >> $BASH_ENV
+            else
+              echo "export migrationsResults=0" >> $BASH_ENV
+            fi
+      - save-to-memstash:
+          key: "migrationsResults_${CIRCLE_WORKFLOW_ID:0:8}"
+          value: "$migrationsResults"
+      - destroy-environment
+     # Here's where you will add some code to rollback on failure      
+
+  deploy-frontend:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          working_directory: frontend
+          command: |
+            yum -y install nodejs
+      - read-from-memstash:
+          key: "BACKEND_IP"
+          value: "backendDNSname"
+      - run:
+          name: Get backend url
+          command: |
+            echo $BACKEND_IP
+            export API_URL="http://${BACKEND_IP}:3030"
+            echo "${API_URL}"
+      - run:
+          name: Deploy frontend objects
+          working_directory: frontend
+          command: |
+            npm i
+            npm run build
+            aws s3 cp ./dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:8} --recursive
+      - destroy-environment
       # Here's where you will add some code to rollback on failure      
-
-  #run-migrations:
-    #docker:
-      ## Docker image here that supports NodeJS
-    #steps:
-      ## Checkout code from git
-      #- run:
-          #name: Run migrations
-          #command: |
-            ## Your code here
-            #exit 1
-      #- run:
-          #name: Send migration results to memstash
-          #command: |
-            ## Your code here
-            #exit 1
-     ## Here's where you will add some code to rollback on failure      
-
-  #deploy-frontend:
-    #docker:
-      ## Docker image here that supports AWS CLI
-    #steps:
-      ## Checkout code from git
-      #- run:
-          #name: Install dependencies
-          #command: |
-            ## your code here
-      #- run:
-          #name: Get backend url
-          #command: |
-            ## your code here
-            #export API_URL="http://${BACKEND_IP}:3030"
-            #echo "${API_URL}"
-      #- run:
-          #name: Deploy frontend objects
-          #command: |
-            ## your code here
-      ## Here's where you will add some code to rollback on failure      
                     
   #deploy-backend:
     #docker:
@@ -353,10 +368,10 @@ workflows:
               only: [main] # [test-feature-branch]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
-      #- run-migrations:
-          #requires: [configure-infrastructure]
-      #- deploy-frontend:
-          #requires: [run-migrations]
+      - run-migrations:
+          requires: [configure-infrastructure]
+      - deploy-frontend:
+          requires: [run-migrations]
       #- deploy-backend:
           #requires: [run-migrations]
       #- smoke-test:
