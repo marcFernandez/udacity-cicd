@@ -225,6 +225,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install curl
+          command: apk add curl
+      - run:
           name: Run migrations
           working_directory: backend
           command: |
