@@ -256,7 +256,7 @@ jobs:
             yum -y install nodejs
       - read-from-memstash:
           key: "BACKEND_IP"
-          value: "backendDNSname"
+          envvarName: "backendDNSname"
       - run:
           name: Get backend url
           command: |
