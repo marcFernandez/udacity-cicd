@@ -266,8 +266,8 @@ jobs:
       - run:
           name: Get backend url
           command: |
-            echo $BACKEND_IP
             export API_URL="http://${BACKEND_IP}:3030"
+            echo 'export API_URL="http://${BACKEND_IP}:3030"' >> $BASH_ENV
             echo "${API_URL}"
       - run:
           name: Deploy frontend objects
@@ -279,22 +279,28 @@ jobs:
       - destroy-environment
       # Here's where you will add some code to rollback on failure      
                     
-  #deploy-backend:
-    #docker:
-      ## Docker image here that supports Ansible
-    #steps:
-      ## Checkout code from git
-      ## Add ssh keys with fingerprint
-      ## attach workspace
-      #- run:
-          #name: Install dependencies
-          #command: |
-            ## your code here
-      #- run:
-          #name: Deploy backend
-          #command: |
-            ## your code here
-      ## Here's where you will add some code to rollback on failure  
+  deploy-backend:
+    docker:
+      - image: python:3.8-alpine
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "d8:73:ec:30:0e:be:a0:fb:c6:88:79:5c:65:c8:e9:15"
+      - attach_workspace:
+          at: ~/project/.circleci/ansible/
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update ansible
+            apk add --update tar
+      - run:
+          name: Deploy backend
+          command: |
+            tar -czvf backend.tar.gz backend
+            ansible-playbook .circleci/ansible/deploy-backend.yml -i .circleci/ansible/inventory.txt
+      # Here's where you will add some code to rollback on failure  
+      - destroy-environment
 
   #smoke-test:
     #docker:
