@@ -4,18 +4,35 @@
   apt:
     autoremove: yes
 
-- name: Checking workDir
-  shell: |
-    ls -lah
-    pwd
-
 - name: Copy files
   copy:
     src: "/root/project/backend.tar.gz"
     dest: "~/"
 
+- name: mkdir udapeople
+  file:
+    path: ~/udapeople
+    state: directory
+
 - name: Extract backend.tgz
   unarchive:
     src: ~/backend.tar.gz
-    dest: ~/
+    dest: ~/udapeople/
     remote_src: true
+
+- name: Install dependencies and run backend with pm2
+  shell: |
+    cd ~/udapeople/backend/
+    echo {{ lookup('env', 'TYPEORM_CONNECTION') }}
+    echo "ENVIRONMENT = production" > .env
+    echo TYPEORM_CONNECTION= {{ lookup('env', 'TYPEORM_CONNECTION') }} >> .env
+    echo TYPEORM_ENTITIES= {{ lookup('env', 'TYPEORM_ENTITIES') }} >> .env
+    echo TYPEORM_HOST= {{ lookup('env', 'TYPEORM_HOST') }} >> .env
+    echo TYPEORM_PORT= {{ lookup('env', 'TYPEORM_PORT') }} >> .env
+    echo TYPEORM_USERNAME= {{ lookup('env', 'TYPEORM_USERNAME') }} >> .env
+    echo TYPEORM_PASSWORD= {{ lookup('env', 'TYPEORM_PASSWORD') }} >> .env
+    echo TYPEORM_DATABASE= {{ lookup('env', 'TYPEORM_DATABASE') }} >> .env
+    npm i
+    npm run build
+    pm2 start --no-autorestart npm -- start
+
