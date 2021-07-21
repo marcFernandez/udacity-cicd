@@ -1,0 +1,21 @@
+---
+- name: remove dependencies that are no longer required
+  become: yes
+  apt:
+    autoremove: yes
+
+- name: Checking workDir
+  shell: |
+    ls -lah
+    pwd
+
+- name: Copy files
+  copy:
+    src: "/root/project/backend.tar.gz"
+    dest: "~/"
+
+- name: Extract backend.tgz
+  unarchive:
+    src: ~/backend.tar.gz
+    dest: ~/
+    remote_src: true
